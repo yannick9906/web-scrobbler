@@ -1,32 +1,18 @@
 'use strict';
 
-Connector.useMediaSessionApi();
+let currentState = {};
 
-Connector.playerSelector = '#player';
+Connector.isScrobblingAllowed = () => Connector.getArtist() !== 'Subscribe to go ad-free';
 
-Connector.getTrackArt = () => {
-	const trackArtUrl = $('#playerBarArt').attr('src');
-	if (trackArtUrl) {
-		return trackArtUrl.replace('=s90-c-e100', '');
-	}
+Connector.isPlaying = () => currentState.isPlaying;
 
-	return null;
-};
+Connector.getCurrentState = () => currentState;
 
-Connector.artistSelector = '#player-artist';
-
-Connector.trackSelector = '#currently-playing-title';
-
-Connector.albumSelector = '.player-album';
-
-Connector.currentTimeSelector = '#time_container_current';
-
-Connector.durationSelector = '#time_container_duration';
-
-Connector.isPlaying = () => {
-	return $('#player *[data-id="play-pause"]').hasClass('playing');
+Connector.onScriptEvent = (event) => {
+	currentState = event.data.trackInfo;
+	Connector.onStateChanged();
 };
 
 Connector.isPodcast = () => $('#player .now-playing-actions').hasClass('podcast');
 
-Connector.isScrobblingAllowed = () => Connector.getArtist() !== 'Subscribe to go ad-free';
+Connector.injectScript('connectors/googlemusic-dom-inject.js');
