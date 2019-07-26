@@ -59,8 +59,9 @@ const categorySelectors = [
 	genericCatSelector, gamingSelector, learningSelector
 ];
 
+let currentVideoPlaylist = [];
 let currentVideoDescription = null;
-let artistTrackFromDescription = null;
+let trackInfoFromDescription = null;
 
 readConnectorOptions();
 setupEventListener();
@@ -73,14 +74,7 @@ Connector.getTrackInfo = () => {
 		return trackInfo;
 	}
 
-	let { artist, track } = Util.processYtVideoTitle(
-		Util.getTextFromSelectors(videoTitleSelector)
-	);
-	if (!artist) {
-		artist = Util.getTextFromSelectors(channelNameSelector);
-	}
-
-	return { artist, track };
+	return getArtistTrackFromVideoTitle();
 };
 
 /*
@@ -89,11 +83,19 @@ Connector.getTrackInfo = () => {
  * state may not be considered empty.
  */
 Connector.getCurrentTime = () => {
-	return $(videoSelector).prop('currentTime');
+	if (currentVideoPlaylist.length > 0) {
+		return getCurrentTimeFromPlaylist();
+	}
+
+	return getVideoCurrentTime();
 };
 
 Connector.getDuration = () => {
-	return $(videoSelector).prop('duration');
+	if (currentVideoPlaylist.length > 0) {
+		return getTrackDurationFromPlaylist();
+	}
+
+	return getVideoDuration();
 };
 
 Connector.isPlaying = () => {
@@ -261,14 +263,148 @@ function getVideoDescription() {
 	return $('#description').text();
 }
 
-function getTrackInfoFromDescription() {
-	const description = getVideoDescription();
-	if (currentVideoDescription === description) {
-		return artistTrackFromDescription;
+function getArtistTrackFromVideoTitle() {
+	let { artist, track } = Util.processYtVideoTitle(
+		Util.getTextFromSelectors(videoTitleSelector)
+	);
+	if (!artist) {
+		artist = Util.getTextFromSelectors(channelNameSelector);
 	}
 
-	currentVideoDescription = description;
-	artistTrackFromDescription = Util.parseYtVideoDescription(description);
+	return { artist, track };
+}
 
-	return artistTrackFromDescription;
+function getTrackInfoFromDescription() {
+	const description = getVideoDescription();
+
+	if (currentVideoDescription === description) {
+		if (currentVideoPlaylist.length > 0) {
+			trackInfoFromDescription = getTrackInfoFromPlaylist(currentVideoPlaylist);
+		}
+	} else {
+		Util.debugLog('Update description');
+		currentVideoDescription = description;
+
+		const playlist = getPlaylistFromDescription(description, getVideoDuration());
+		if (playlist.length > 0) {
+			currentVideoPlaylist = playlist;
+			trackInfoFromDescription = getTrackInfoFromPlaylist(playlist);
+		} else if (Util.isYtVideoDescriptionValid(description)) {
+			currentVideoPlaylist = [];
+			trackInfoFromDescription = Util.parseYtVideoDescription(description);
+		} else {
+			currentVideoPlaylist = [];
+			trackInfoFromDescription = null;
+		}
+	}
+
+	return trackInfoFromDescription;
+}
+
+// StartTimestamp - EndTimestamp Track Info
+const regex3 = /(\d{0,2}:*\d{1,2}:\d{2})\s*-\s*(\d{0,2}:*\d{1,2}:\d{2})\s(.+)/i;
+
+// TODO Add desc
+const regex1 = /[[(]*(\d{0,2}:*\d{1,2}:\d{2})[\])]*\s+(.+)/i;
+const regex2 = /\s*(.+)\s+[[(]*(\d{0,2}:*\d{2}:\d{2})[\])]*/i;
+
+const noPrefix = /^\d+\./;
+
+const regexes = [{
+	regex: regex3, timestampIndex: 1, trackIndex: 3
+}, {
+	regex: regex1, timestampIndex: 1, trackIndex: 2
+}, {
+	regex: regex2, timestampIndex: 2, trackIndex: 1
+}];
+
+function getTrackInfoFromPlaylist() {
+	let { artist, track } = getCurrentEntryFromPlaylist();
+	if (!artist) {
+		({ artist } = getArtistTrackFromVideoTitle());
+	}
+
+	return { artist, track };
+}
+
+function getPlaylistFromDescription(description, videoDuration) {
+	let playlist = [];
+
+	const lines = description.split('\n');
+	for (const line of lines) {
+		for (const regexData of regexes) {
+			const { regex, timestampIndex, trackIndex } = regexData;
+
+			const matchResult = line.match(regex);
+
+			if (matchResult) {
+				const rawTimestamp = matchResult[timestampIndex];
+				const timestamp = Util.stringToSeconds(rawTimestamp);
+				const rawTrack = matchResult[trackIndex].replace(noPrefix, '');
+				const { artist, track } = Util.splitArtistTrack(rawTrack);
+
+				playlist.push({ timestamp, artist, track });
+				break;
+			}
+		}
+	}
+
+	playlist = playlist.sort(compareTimestamps);
+
+	for (let i = 0; i < playlist.length; ++i) {
+		let duration = 0;
+		const entry = playlist[i];
+
+		if (i === 0) {
+			duration = videoDuration - entry.timestamp;
+		} else {
+			const prevEntry = playlist[i - 1];
+			duration = prevEntry.timestamp - entry.timestamp;
+		}
+
+		entry.duration = duration;
+	}
+
+	console.log(playlist);
+
+	return playlist;
+}
+
+function compareTimestamps(a, b) {
+	return b.timestamp - a.timestamp;
+}
+
+function getCurrentEntryFromPlaylist() {
+	const currentTime = getVideoCurrentTime();
+
+	for (const entry of currentVideoPlaylist) {
+		if (currentTime >= entry.timestamp) {
+			return entry;
+		}
+	}
+
+	return null;
+}
+
+function getTrackDurationFromPlaylist() {
+	const entry = getCurrentEntryFromPlaylist();
+	return entry ? entry.duration : null;
+}
+
+function getCurrentTimeFromPlaylist() {
+	const entry = getCurrentEntryFromPlaylist();
+	if (!entry) {
+		return null;
+	}
+
+	const currentTime = getVideoCurrentTime();
+	return currentTime - entry.timestamp;
+}
+
+function getVideoDuration() {
+	return $(videoSelector).prop('duration');
+}
+
+function getVideoCurrentTime() {
+	return $(videoSelector).prop('currentTime');
 }
