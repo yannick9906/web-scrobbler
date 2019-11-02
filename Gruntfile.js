@@ -1,6 +1,5 @@
-'use strict';
-
 require('dotenv').config();
+const webpackConfig = require('./webpack.config.js');
 
 const CHROME_EXTENSION_ID = 'hhinaapppaileiechjoiifaancjggfjm';
 const FIREFOX_EXTENSION_ID = '{799c0914-748b-41df-a25c-22d008f9e83f}';
@@ -23,6 +22,11 @@ const EXTENSION_SRC = [
 	'**/*',
 	// Skip SVG
 	'!icons/*.svg'
+];
+
+// const EXTENSION_JS_FILES = '**/*.js';
+const EXTENSION_RESOURCES = [
+	'manifest.json', '_locales/**', 'icons/**', 'connectors/**', '**/*.css',
 ];
 const EXTENSION_DOCS = [
 	'README.md', 'LICENSE.md'
@@ -73,10 +77,10 @@ module.exports = (grunt) => {
 			],
 		},
 		copy: {
-			source_files: {
+			resources: {
 				expand: true,
 				cwd: SRC_DIR,
-				src: EXTENSION_SRC,
+				src: EXTENSION_RESOURCES,
 				dest: BUILD_DIR,
 			},
 			documentation: {
@@ -155,6 +159,9 @@ module.exports = (grunt) => {
 					options_page: undefined,
 				}
 			},
+		},
+		webpack: {
+			prod: webpackConfig,
 		},
 
 		/**
@@ -282,9 +289,21 @@ module.exports = (grunt) => {
 		grunt.config.set('preprocess', config);
 
 		grunt.task.run([
-			'copy',
-			'preprocess',
-			`replace_json:${browser}`
+			// 'copy',
+			// 'preprocess',
+			// `replace_json:${browser}`,
+			// 'webpack'
+
+			'copy:resources',
+			'copy:documentation',
+			'copy:extra_files',
+
+			// 'preprocess',
+			`clean:${browser}`,
+			// 'imagemin',
+			`replace_json:${browser}`,
+
+			'webpack',
 		]);
 	});
 

@@ -3,3 +3,6 @@ globals:
   define: readonly
 parserOptions:
   ecmaVersion: 8
+  sourceType: module
+rules:
+  strict: [error, safe]

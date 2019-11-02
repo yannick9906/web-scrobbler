@@ -1,5 +1,3 @@
-'use strict';
-
 const helpBtnId = 'help-btn';
 const descContainerId = 'description';
 

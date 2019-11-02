@@ -1,11 +1,8 @@
-'use strict';
-
 /* @ifndef DEBUG
 chrome.runtime.onInstalled.addListener((event) => {
 	if ('install' !== event.reason) {
 		return;
 	}
-
 	chrome.tabs.create({
 		url: '/ui/startup/startup.html'
 	});
@@ -15,10 +12,10 @@ chrome.runtime.onInstalled.addListener((event) => {
 /**
  * Background script entry point.
  */
-require(['extension', 'util/migrate'], (...modules) => {
-	const [Extension, Migrate] = modules;
 
-	Migrate.migrate().then(() => {
-		new Extension().start();
-	});
+import { Extension } from './extension';
+import { migrate } from './util/migrate';
+
+migrate().then(() => {
+	new Extension().start();
 });

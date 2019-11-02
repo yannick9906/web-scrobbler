@@ -1,228 +1,222 @@
-'use strict';
+const browser = require('webextension-polyfill');
+const CustomPatterns = require('storage/custom-patterns');
+const BrowserStorage = require('storage/browser-storage');
 
-define((require) => {
-	const browser = require('webextension-polyfill');
-	const CustomPatterns = require('storage/custom-patterns');
-	const BrowserStorage = require('storage/browser-storage');
+const { getSortedConnectors } = require('util/util-connector');
 
-	const { getSortedConnectors } = require('util/util-connector');
+const sortedConnectors = getSortedConnectors();
+const localCache = BrowserStorage.getStorage(BrowserStorage.LOCAL_CACHE);
 
-	const sortedConnectors = getSortedConnectors();
-	const localCache = BrowserStorage.getStorage(BrowserStorage.LOCAL_CACHE);
+const patternsModalOkBtnId = 'conn-conf-ok';
+const patternsModalAddBtnId = 'add-pattern';
+const patternsModalResetBtnId = 'conn-conf-reset';
 
-	const patternsModalOkBtnId = 'conn-conf-ok';
-	const patternsModalAddBtnId = 'add-pattern';
-	const patternsModalResetBtnId = 'conn-conf-reset';
+const patternsListId = 'conn-conf-list';
+const patternsModalId = 'conn-conf-modal';
+const patternsModalTitleId = 'url-patterns-title';
 
-	const patternsListId = 'conn-conf-list';
-	const patternsModalId = 'conn-conf-modal';
-	const patternsModalTitleId = 'url-patterns-title';
+const editedModalId = 'edited-track-modal';
+const editedModalListId = 'edited-track-content';
+const editedModalClearBtnId = 'clear-cache';
 
-	const editedModalId = 'edited-track-modal';
-	const editedModalListId = 'edited-track-content';
-	const editedModalClearBtnId = 'clear-cache';
+export function initialize() {
+	initAddPatternDialog();
+	initViewEditedDialog();
+}
 
-	function initialize() {
-		initAddPatternDialog();
-		initViewEditedDialog();
+function initAddPatternDialog() {
+	// const modalDialog = document.getElementById(patternsModalId);
+	$('#conn-conf-modal').on('show.bs.modal', (event) => {
+		const button = event.relatedTarget;
+		const connectorIndex = button.getAttribute('data-conn');
+
+		initPatternsList(connectorIndex);
+	});
+
+	const okButton = document.getElementById(patternsModalOkBtnId);
+	okButton.addEventListener('click', savePatterns);
+
+	const addButton = document.getElementById(patternsModalAddBtnId);
+	addButton.addEventListener('click', addNewPatternInput);
+
+	const resetButton = document.getElementById(patternsModalResetBtnId);
+	resetButton.addEventListener('click', resetPatterns);
+}
+
+function initViewEditedDialog() {
+	// const modalDialog = document.getElementById(patternsModalId);
+	$('#edited-track-modal').on('show.bs.modal', () => {
+		fillViewEditedDialog();
+	});
+
+	const clearButton = document.getElementById(editedModalClearBtnId);
+	clearButton.addEventListener('click', () => {
+		clearLocalCache();
+	});
+}
+
+async function initPatternsList(index) {
+	const connector = sortedConnectors[index];
+
+	const modalDialog = document.getElementById(patternsModalId);
+	modalDialog.setAttribute('data-conn', index);
+
+	const modalTitle = document.getElementById(patternsModalTitleId);
+	modalTitle.textContent = connector.label;
+
+	const allPatterns = await CustomPatterns.getAllPatterns();
+	const patterns = allPatterns[connector.id] || [];
+
+	const patternsList = document.getElementById(patternsListId);
+	patternsList.innerHTML = '';
+
+	for (const value of patterns) {
+		patternsList.append(createNewInputContainer(value));
 	}
+}
 
-	function initAddPatternDialog() {
-		// const modalDialog = document.getElementById(patternsModalId);
-		$('#conn-conf-modal').on('show.bs.modal', (event) => {
-			const button = event.relatedTarget;
-			const connectorIndex = button.getAttribute('data-conn');
+async function fillViewEditedDialog() {
+	// const modal = document.getElementById(editedModalId);
+	const cacheDom = document.getElementById(editedModalListId);
+	cacheDom.innerHTML = '';
 
-			initPatternsList(connectorIndex);
-		});
+	const data = await localCache.get();
+	const cacheSize = Object.keys(data).length;
 
-		const okButton = document.getElementById(patternsModalOkBtnId);
-		okButton.addEventListener('click', savePatterns);
+	if (cacheSize === 0) {
+		cacheDom.append(createNoEditedLabel());
+	} else {
+		for (const songId in data) {
+			const { artist, track, album } = data[songId];
+			const liItem = createTrackItem(artist, track, album);
 
-		const addButton = document.getElementById(patternsModalAddBtnId);
-		addButton.addEventListener('click', addNewPatternInput);
+			const removeButton = liItem.getElementsByTagName('button')[0];
+			removeButton.addEventListener('click', async() => {
+				const data = await localCache.get();
+				delete data[songId];
+				await localCache.set(data);
 
-		const resetButton = document.getElementById(patternsModalResetBtnId);
-		resetButton.addEventListener('click', resetPatterns);
-	}
+				const cacheSize = Object.keys(data).length;
 
-	function initViewEditedDialog() {
-		// const modalDialog = document.getElementById(patternsModalId);
-		$('#edited-track-modal').on('show.bs.modal', () => {
-			fillViewEditedDialog();
-		});
+				if (cacheSize === 0) {
+					cacheDom.append(createNoEditedLabel());
+				}
+				updateViewEditedDialogTitle(cacheSize);
+			});
 
-		const clearButton = document.getElementById(editedModalClearBtnId);
-		clearButton.addEventListener('click', () => {
-			clearLocalCache();
-		});
-	}
-
-	async function initPatternsList(index) {
-		const connector = sortedConnectors[index];
-
-		const modalDialog = document.getElementById(patternsModalId);
-		modalDialog.setAttribute('data-conn', index);
-
-		const modalTitle = document.getElementById(patternsModalTitleId);
-		modalTitle.textContent = connector.label;
-
-		const allPatterns = await CustomPatterns.getAllPatterns();
-		const patterns = allPatterns[connector.id] || [];
-
-		const patternsList = document.getElementById(patternsListId);
-		patternsList.innerHTML = '';
-
-		for (const value of patterns) {
-			patternsList.append(createNewInputContainer(value));
+			cacheDom.append(liItem);
 		}
 	}
 
-	async function fillViewEditedDialog() {
-		// const modal = document.getElementById(editedModalId);
-		const cacheDom = document.getElementById(editedModalListId);
-		cacheDom.innerHTML = '';
+	updateViewEditedDialogTitle(cacheSize);
+}
 
-		const data = await localCache.get();
-		const cacheSize = Object.keys(data).length;
+async function updateViewEditedDialogTitle(cacheSize) {
+	const title = browser.i18n.getMessage(
+		'optionsEditedTracksPopupTitle', cacheSize.toString());
 
-		if (cacheSize === 0) {
-			cacheDom.append(createNoEditedLabel());
-		} else {
-			for (const songId in data) {
-				const { artist, track, album } = data[songId];
-				const liItem = createTrackItem(artist, track, album);
+	const modal = document.getElementById(editedModalId);
+	modal.querySelector('.modal-title').textContent = title;
+}
 
-				const removeButton = liItem.getElementsByTagName('button')[0];
-				removeButton.addEventListener('click', async() => {
-					const data = await localCache.get();
-					delete data[songId];
-					await localCache.set(data);
+function savePatterns() {
+	const modalDialog = document.getElementById(patternsModalId);
+	const patternsList = document.getElementById(patternsListId);
+	const connector = getConnectorAttachedTo(modalDialog);
 
-					const cacheSize = Object.keys(data).length;
+	const patterns = [];
 
-					if (cacheSize === 0) {
-						cacheDom.append(createNoEditedLabel());
-					}
-					updateViewEditedDialogTitle(cacheSize);
-				});
-
-				cacheDom.append(liItem);
-			}
-		}
-
-		updateViewEditedDialogTitle(cacheSize);
-	}
-
-	async function updateViewEditedDialogTitle(cacheSize) {
-		const title = browser.i18n.getMessage(
-			'optionsEditedTracksPopupTitle', cacheSize.toString());
-
-		const modal = document.getElementById(editedModalId);
-		modal.querySelector('.modal-title').textContent = title;
-	}
-
-	function savePatterns() {
-		const modalDialog = document.getElementById(patternsModalId);
-		const patternsList = document.getElementById(patternsListId);
-		const connector = getConnectorAttachedTo(modalDialog);
-
-		const patterns = [];
-
-		const inputs = patternsList.getElementsByTagName('input');
-		for (const input of inputs) {
-			const pattern = input.value;
-			if (pattern.length > 0) {
-				patterns.push(pattern);
-			}
-		}
-
-		if (patterns.length > 0) {
-			CustomPatterns.setPatterns(connector.id, patterns);
-		} else {
-			CustomPatterns.resetPatterns(connector.id);
+	const inputs = patternsList.getElementsByTagName('input');
+	for (const input of inputs) {
+		const pattern = input.value;
+		if (pattern.length > 0) {
+			patterns.push(pattern);
 		}
 	}
 
-	function addNewPatternInput() {
-		const patternsList = document.getElementById(patternsListId);
-		const inputContainer = createNewInputContainer();
-
-		patternsList.append(inputContainer);
-		inputContainer.getElementsByTagName('input')[0].focus();
-	}
-
-	function resetPatterns() {
-		const modalDialog = document.getElementById(patternsModalId);
-		const connector = getConnectorAttachedTo(modalDialog);
-
+	if (patterns.length > 0) {
+		CustomPatterns.setPatterns(connector.id, patterns);
+	} else {
 		CustomPatterns.resetPatterns(connector.id);
 	}
+}
 
-	function createNewInputContainer(value) {
-		const container = document.createElement('li');
+function addNewPatternInput() {
+	const patternsList = document.getElementById(patternsListId);
+	const inputContainer = createNewInputContainer();
 
-		const input = document.createElement('input');
-		input.setAttribute('type', 'text');
-		input.classList.add('form-control');
-		input.value = value || '';
+	patternsList.append(inputContainer);
+	inputContainer.getElementsByTagName('input')[0].focus();
+}
 
-		const closeButton = createCloseButton(container);
-		closeButton.classList.add('btn', 'btn-outline-secondary');
+function resetPatterns() {
+	const modalDialog = document.getElementById(patternsModalId);
+	const connector = getConnectorAttachedTo(modalDialog);
 
-		const inputAppend = document.createElement('div');
-		inputAppend.classList.add('input-group-append');
-		inputAppend.append(closeButton);
+	CustomPatterns.resetPatterns(connector.id);
+}
 
-		container.classList.add('input-group');
-		container.append(input, inputAppend);
+function createNewInputContainer(value) {
+	const container = document.createElement('li');
 
-		return container;
+	const input = document.createElement('input');
+	input.setAttribute('type', 'text');
+	input.classList.add('form-control');
+	input.value = value || '';
+
+	const closeButton = createCloseButton(container);
+	closeButton.classList.add('btn', 'btn-outline-secondary');
+
+	const inputAppend = document.createElement('div');
+	inputAppend.classList.add('input-group-append');
+	inputAppend.append(closeButton);
+
+	container.classList.add('input-group');
+	container.append(input, inputAppend);
+
+	return container;
+}
+
+function createTrackItem(artist, track, album) {
+	const liItem = document.createElement('li');
+	liItem.textContent = `${artist} — ${track}`;
+
+	const removeBtn = createCloseButton(liItem);
+	removeBtn.classList.add('close', 'close-btn');
+
+	if (album) {
+		const title = browser.i18n.getMessage('albumTooltip', album);
+		liItem.setAttribute('title', title);
 	}
 
-	function createTrackItem(artist, track, album) {
-		const liItem = document.createElement('li');
-		liItem.textContent = `${artist} — ${track}`;
+	liItem.append(removeBtn);
 
-		const removeBtn = createCloseButton(liItem);
-		removeBtn.classList.add('close', 'close-btn');
+	return liItem;
+}
 
-		if (album) {
-			const title = browser.i18n.getMessage('albumTooltip', album);
-			liItem.setAttribute('title', title);
-		}
+function createCloseButton(parent) {
+	const closeButton = document.createElement('button');
+	closeButton.setAttribute('type', 'button');
+	closeButton.innerHTML = '&times;';
+	closeButton.addEventListener('click', () => {
+		parent.remove();
+	});
 
-		liItem.append(removeBtn);
+	return closeButton;
+}
 
-		return liItem;
-	}
+function createNoEditedLabel() {
+	const label = document.createElement('li');
+	label.setAttribute('i18n', 'noItemsInCache');
 
-	function createCloseButton(parent) {
-		const closeButton = document.createElement('button');
-		closeButton.setAttribute('type', 'button');
-		closeButton.innerHTML = '&times;';
-		closeButton.addEventListener('click', () => {
-			parent.remove();
-		});
+	return label;
+}
 
-		return closeButton;
-	}
+function getConnectorAttachedTo(modalDialog) {
+	const index = modalDialog.getAttribute('data-conn');
+	return sortedConnectors[index];
+}
 
-	function createNoEditedLabel() {
-		const label = document.createElement('li');
-		label.setAttribute('i18n', 'noItemsInCache');
-
-		return label;
-	}
-
-	function getConnectorAttachedTo(modalDialog) {
-		const index = modalDialog.getAttribute('data-conn');
-		return sortedConnectors[index];
-	}
-
-	function clearLocalCache() {
-		localCache.clear();
-	}
-
-	return { initialize };
-});
+function clearLocalCache() {
+	localCache.clear();
+}

@@ -1,5 +1,3 @@
-'use strict';
-
 /**
  * All match entries are defined here, instead of manifest.
  *
@@ -17,7 +15,7 @@
  *   False by default.
  */
 
-const connectors = [{
+export const connectors = [{
 	label: 'YouTube',
 	matches: [
 		'*://www.youtube.com/*'
@@ -1485,5 +1483,3 @@ const connectors = [{
 	js: 'connectors/radiorethink.js',
 	id: 'radiorethink',
 }];
-
-define(() => connectors);

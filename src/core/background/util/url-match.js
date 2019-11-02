@@ -1,5 +1,3 @@
-'use strict';
-
 function escapeRegExp(string) {
 	return string.replace(/[[^$.|?*+(){}\\]/g, '\\$&');
 	// return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -62,7 +60,7 @@ function createPattern(pattern) {
  * @param  {String} pattern URL pattern
  * @return {Boolean} Result
  */
-function test(string, pattern) {
+export function test(string, pattern) {
 	const regex = createPattern(pattern);
 	if (!regex) {
 		return false;
@@ -70,7 +68,3 @@ function test(string, pattern) {
 
 	return regex.test(string);
 }
-
-define(() => {
-	return { test, createPattern };
-});
