@@ -120,8 +120,36 @@ define((require) => {
 
 			this.currentSong.flags.isSkipped = true;
 
-			this.playbackTimer.reset();
-			this.replayDetectionTimer.reset();
+			// this.playbackTimer.reset();
+			// this.replayDetectionTimer.reset();
+
+			this.onSongUpdated();
+		}
+
+		unskipCurrentSong() {
+			this.assertSongIsNotNull();
+
+			this.currentSong.flags.isSkipped = false;
+
+			if (this.currentSong.isValid()) {
+				if (this.currentSong.isPlaying()) {
+					const {	isMarkedAsPlaying } = this.currentSong.flags;
+					if (!isMarkedAsPlaying) {
+						this.setSongNowPlaying();
+					} else {
+						this.setMode(ControllerMode.Playing);
+					}
+
+					this.updateTimers(this.currentSong.getDuration());
+				} else {
+					this.setMode(ControllerMode.Base);
+
+					this.playbackTimer.pause();
+					this.replayDetectionTimer.pause();
+				}
+			} else {
+				this.setMode(ControllerMode.Unknown);
+			}
 
 			this.onSongUpdated();
 		}
@@ -248,6 +276,8 @@ define((require) => {
 		 * @param {Object} newState Connector state
 		 */
 		processNewState(newState) {
+			this.debugLog(`New song detected: ${toString(newState)}`);
+
 			/*
 			 * We've hit a new song (or replaying the previous one)
 			 * clear any previous song and its bindings.
@@ -255,13 +285,6 @@ define((require) => {
 			this.resetState();
 			this.currentSong = new Song(newState, this.connector);
 			this.currentSong.flags.isReplaying = this.isReplayingSong;
-
-			this.debugLog(`New song detected: ${toString(newState)}`);
-
-			if (!this.shouldScrobblePodcasts && newState.isPodcast) {
-				this.skipCurrentSong();
-				return;
-			}
 
 			/*
 			 * Start the timer, actual time will be set after processing
@@ -302,7 +325,7 @@ define((require) => {
 			}
 
 			const { currentTime, isPlaying, trackArt, duration } = newState;
-			const isPlayingStateChanged = this.currentSong.parsed.isPlaying !== isPlaying;
+			const isPlayingStateChanged = this.currentSong.isPlaying() !== isPlaying;
 
 			this.currentSong.parsed.currentTime = currentTime;
 			this.currentSong.parsed.isPlaying = isPlaying;
@@ -342,6 +365,12 @@ define((require) => {
 			this.debugLog(
 				`Song finished processing: ${this.currentSong.toString()}`);
 
+			const shouldSkip = !this.shouldScrobblePodcasts && this.currentSong.isPodcast();
+			if (shouldSkip) {
+				this.skipCurrentSong();
+				return;
+			}
+
 			if (this.currentSong.isValid()) {
 				// Processing cleans this flag
 				this.currentSong.flags.isMarkedAsPlaying = false;
@@ -352,7 +381,7 @@ define((require) => {
 				 * If the song is playing, mark it immediately;
 				 * otherwise will be flagged in isPlaying binding.
 				 */
-				if (this.currentSong.parsed.isPlaying) {
+				if (this.currentSong.isPlaying()) {
 					/*
 					 * If playback timer is expired, then the extension
 					 * will scrobble song immediately, and there's no need
@@ -361,9 +390,9 @@ define((require) => {
 					 */
 					if (!this.playbackTimer.isExpired()) {
 						this.setSongNowPlaying();
-					} else {
-						this.dispatchEvent(ControllerEvent.SongNowPlaying);
 					}
+
+					this.dispatchEvent(ControllerEvent.SongNowPlaying);
 				} else {
 					this.setMode(ControllerMode.Base);
 				}
@@ -404,6 +433,7 @@ define((require) => {
 				// Maybe the song was not marked as playing yet
 				if (!isMarkedAsPlaying && this.currentSong.isValid()) {
 					this.setSongNowPlaying();
+					this.showNowPlayingNotification();
 				} else {
 					// Resend current mode
 					this.setMode(this.mode);
@@ -473,8 +503,9 @@ define((require) => {
 				this.replayDetectionTimer.update(duration);
 
 				const remainedSeconds = this.playbackTimer.getRemainingSeconds();
+				const remainedPlayBackSeconds = this.replayDetectionTimer.getRemainingSeconds();
 				this.debugLog(`The song will be scrobbled in ${remainedSeconds} seconds`);
-				this.debugLog(`The song will be repeated in ${duration} seconds`);
+				this.debugLog(`The song will be repeated in ${remainedPlayBackSeconds} seconds`);
 			} else {
 				this.debugLog('The song is too short to scrobble');
 			}
@@ -495,8 +526,6 @@ define((require) => {
 				this.debugLog('Song isn\'t set as now playing');
 				this.setMode(ControllerMode.Err);
 			}
-
-			this.dispatchEvent(ControllerEvent.SongNowPlaying);
 		}
 
 		/**

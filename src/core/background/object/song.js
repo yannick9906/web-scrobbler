@@ -172,6 +172,14 @@ define((require) => {
 			return this.flags.isValid || this.flags.isCorrectedByUser;
 		}
 
+		isPlaying() {
+			return this.parsed.isPlaying;
+		}
+
+		isPodcast() {
+			return this.parsed.isPodcast;
+		}
+
 		/**
 		 * Check if song equals another song.
 		 * @param  {Object} song Song instance to compare

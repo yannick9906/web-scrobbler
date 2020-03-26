@@ -97,7 +97,7 @@ class InfoPopup {
 			this.view.setRevertButtonState(isEnabled);
 
 			this.view.setSkipButtonState(!isScrobbled);
-			this.view.setUnskipButtonState(false);
+			this.view.setUnskipButtonState(isSkipped && !isScrobbled);
 		} else if (this.mode === modeEdit) {
 			const isEnabled = InfoPopup.areTrackFieldsComplete(this.trackFields);
 
@@ -162,6 +162,10 @@ class InfoPopup {
 
 	onRevertBtnClick() {
 		this.sendMessage('REQUEST_RESET_SONG');
+	}
+
+	onUnskipBtnClick() {
+		this.sendMessage('REQUEST_UNSKIP_SONG');
 	}
 
 	onLoveBtnClick() {

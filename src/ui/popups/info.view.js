@@ -37,6 +37,7 @@ class InfoPopupView {
 			[skipBtnId]: this.infoPopup.onSkipBtnClick,
 			[submitBtnId]: this.infoPopup.onSubmitBtnClick,
 			[swapBtnId]: this.infoPopup.onSwapBtnClick,
+			[unskipBtnId]: this.infoPopup.onUnskipBtnClick,
 		};
 
 		this.setupControlListeners();

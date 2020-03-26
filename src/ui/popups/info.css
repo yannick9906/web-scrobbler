@@ -136,6 +136,10 @@ input {
 	color: #d51007;
 }
 
+.control-btn.unskip-btn:hover::before {
+	color: #495053;
+}
+
 .unloved::before {
 	content: '\f004';
 }
