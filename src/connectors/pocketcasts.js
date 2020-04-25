@@ -14,4 +14,6 @@ Connector.remainingTimeSelector = '.time-remaining';
 
 Connector.trackArtSelector = '.player-image img';
 
-Connector.isPodcast = () => true;
+Connector.getMetaInfo = () => {
+	return { mediaType: 'podcast' };
+};

@@ -142,6 +142,10 @@ define((require) => {
 		await options.update({ [key]: value });
 	}
 
+	async function getConnectorOptions() {
+		return connectorsOptions.get();
+	}
+
 	async function getConnectorOption(connector, key) {
 		assertValidConnectorOptionKey(connector, key);
 
@@ -223,7 +227,11 @@ define((require) => {
 	return {
 		isConnectorEnabled, setConnectorEnabled, setAllConnectorsEnabled,
 
-		getOption, setOption, getConnectorOption, setConnectorOption,
+		getOption,
+		setOption,
+		getConnectorOptions,
+		getConnectorOption,
+		setConnectorOption,
 
 		DISABLE_GA, FORCE_RECOGNIZE, USE_NOTIFICATIONS,
 		SCROBBLE_PODCASTS, USE_UNRECOGNIZED_SONG_NOTIFICATIONS,

@@ -27,6 +27,17 @@ Connector.isPlaying = () => {
 	return $('#player *[data-id="play-pause"]').hasClass('playing');
 };
 
-Connector.isPodcast = () => $('#player .now-playing-actions').hasClass('podcast');
-
 Connector.isScrobblingAllowed = () => Connector.getArtist() !== 'Subscribe to go ad-free';
+
+Connector.getMetaInfo = () => {
+	const mediaType = getMediaType();
+	return { mediaType };
+};
+
+function getMediaType() {
+	if ($('#player .now-playing-actions').hasClass('podcast')) {
+		return 'podcast';
+	}
+
+	return 'music';
+}

@@ -41,8 +41,11 @@ define((require) => {
 
 			this.currentSong = null;
 			this.isReplayingSong = false;
-			this.shouldScrobblePodcasts = true;
-			(async() => this.shouldScrobblePodcasts = await Options.getOption(Options.SCROBBLE_PODCASTS))();
+
+			(async() => {
+				this.scrobblePodcasts = await Options.getOption(Options.SCROBBLE_PODCASTS);
+				this.connectorsOptions = await Options.getConnectorOptions();
+			})();
 
 			this.debugLog(`Created controller for ${connector.label} connector`);
 		}
@@ -258,7 +261,7 @@ define((require) => {
 
 			this.debugLog(`New song detected: ${toString(newState)}`);
 
-			if (!this.shouldScrobblePodcasts && newState.isPodcast) {
+			if (this.shouldSkipCurrentSong()) {
 				this.skipCurrentSong();
 				return;
 			}
@@ -530,6 +533,45 @@ define((require) => {
 				this.debugLog('Scrobbling failed', 'warn');
 				this.setMode(ControllerMode.Err);
 			}
+		}
+
+		shouldSkipCurrentSong() {
+			const metaInfo = this.currentSong.parsed.metaInfo;
+			console.log(metaInfo);
+			if (!metaInfo) {
+				return false;
+			}
+
+			if (metaInfo.mediaType === 'podcast' && !this.scrobblePodcasts) {
+				return true;
+			}
+
+			switch (this.connector.id) {
+				case 'youtube': {
+					const { videoCategory } = metaInfo;
+					const scrobbleMusic = this.connectorsOptions['YouTube'].scrobbleMusicOnly;
+					const scrobbleEntertainment = this.connectorsOptions['YouTube'].scrobbleEntertainmentOnly;
+
+					console.log(scrobbleMusic);
+					console.log(scrobbleEntertainment);
+
+					if (!(scrobbleMusic && scrobbleEntertainment)) {
+						return false;
+					}
+
+					if (scrobbleMusic && videoCategory === 'Music') {
+						return false;
+					}
+
+					if (scrobbleEntertainment && videoCategory === 'Entertainment') {
+						return false;
+					}
+
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		reset() {

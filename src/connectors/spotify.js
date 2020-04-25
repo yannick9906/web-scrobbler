@@ -22,10 +22,20 @@ Connector.applyFilter(MetadataFilter.getSpotifyFilter());
 
 Connector.isScrobblingAllowed = () => isMusicPlaying() && isMainTab();
 
-Connector.isPodcast = () => artistUrlIncludes('/show/');
+Connector.getMetaInfo = () => {
+	const mediaType = getMediaType();
+	return { mediaType };
+};
 
 function isMusicPlaying() {
 	return artistUrlIncludes('/artist/', '/show/');
+}
+
+function getMediaType() {
+	if (artistUrlIncludes('/show/')) {
+		return 'podcast';
+	}
+	return 'music';
 }
 
 function artistUrlIncludes(...strings) {

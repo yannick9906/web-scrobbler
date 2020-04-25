@@ -1,0 +1,19 @@
+add Connector.getMetaInfo() where will be an additional info processed by a tab controller.
+
+YouTube.getMetaInfo() {
+	const category = getVideoCategory();
+	return { category };
+}
+
+Tidal.getMetaInfo() {
+	const shortTrack = getShortTrack();
+	return { shortTrack };
+}
+
+Spotify.getMetaInfo() {
+	const type = getType(); // podcast or music
+	return { type };
+}
+
+
+In controller process meta info for connectors (by ID)

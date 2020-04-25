@@ -1,9 +1,5 @@
 'use strict';
 
-let useShortTrackNames = false;
-
-readConnectorOptions();
-
 Connector.playerSelector = '#nowPlaying';
 
 Connector.playButtonSelector = `${Connector.playerSelector} [class*="playbackToggle"]`;
@@ -15,7 +11,7 @@ Connector.isPlaying = () => $(Connector.playButtonSelector).attr('data-test') ==
 const fullTrackSelector = `${Connector.playerSelector} [class^="mediaInformation"] span:nth-child(1) a`;
 const shortTrackSelector = `${Connector.playerSelector} [class^="infoTableWrapper"] > table:nth-child(1) > tbody > tr:nth-child(1) > td:nth-child(2)`;
 
-Connector.getTrack = () => Util.getTextFromSelectors(useShortTrackNames ? shortTrackSelector : fullTrackSelector);
+Connector.getTrack = () => Util.getTextFromSelectors(fullTrackSelector);
 
 Connector.getUniqueID = () => {
 	const trackUrl = $(fullTrackSelector).attr('href');
@@ -37,6 +33,7 @@ Connector.durationSelector = `${Connector.playerSelector} [data-test="duration"]
 
 Connector.applyFilter(MetadataFilter.getTidalFilter());
 
-async function readConnectorOptions() {
-	useShortTrackNames = await Util.getOption('Tidal', 'useShortTrackNames');
-}
+Connector.getMetaInfo = () => {
+	const shortTrack = Util.getTextFromSelectors(shortTrackSelector);
+	return { shortTrack };
+};
