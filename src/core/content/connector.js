@@ -332,18 +332,22 @@ function BaseConnector() {
 	 */
 	this.isPlaying = () => {
 		if (this.playButtonSelector) {
-			const playButton = Util.queryElements(this.playButtonSelector);
+			const playButton = Util.queryElement(this.playButtonSelector);
 			if (playButton) {
-				return !playButton.is(':visible');
+				return getComputedStyle(playButton)['display'] === 'none';
+				// return playButton.style.display === 'none';
+				// return playButton.offsetWidth === 0 && playButton.offsetHeight === 0;
 			}
 
-			return false;
+			return true;
 		}
 
 		if (this.pauseButtonSelector) {
-			const pauseButton = Util.queryElements(this.pauseButtonSelector);
+			const pauseButton = Util.queryElement(this.pauseButtonSelector);
 			if (pauseButton) {
-				return pauseButton.is(':visible');
+				return getComputedStyle(pauseButton)['display'] !== 'none';
+				// return pauseButton.style.display !== 'none';
+				// return pauseButton.offsetWidth !== 0 && pauseButton.offsetHeight !== 0;
 			}
 
 			return false;
