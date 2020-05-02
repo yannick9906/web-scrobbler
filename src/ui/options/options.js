@@ -1,98 +1,149 @@
 'use strict';
 
+const releasesUrl = 'https://github.com/web-scrobbler/web-scrobbler/releases/tag';
+const rawSrcUrl = 'https://github.com/web-scrobbler/web-scrobbler/blob/master/src/';
+
+const exportFileName = 'local-cache.json';
+
 define((require) => {
+	const browser = require('webextension-polyfill');
+
+	const BrowserStorage = require('storage/browser-storage');
 	const Options = require('storage/options');
 
-	const hiddenOptionsId = 'hidden-options';
-	const optionsContainerId = 'collapseOptions';
-	const scrobblePercentId = 'scrobblePercent';
+	const { getPrivacyPolicyFilename } = require('util/util-browser');
+	const { getSortedConnectors } = require('util/util-connector');
 
-	const percentValues = [
-		10, 20, 30, 40, 50, 60, 70, 80, 90, 100
-	];
+	const sortedConnectors = getSortedConnectors();
+	const localCache = BrowserStorage.getStorage(BrowserStorage.LOCAL_CACHE);
 
-	/**
-	 * Object that maps options to their element IDs.
-	 * @type {Object}
-	 */
-	const OPTIONS_UI_MAP = {
-		'disable-ga': Options.DISABLE_GA,
-		'force-recognize': Options.FORCE_RECOGNIZE,
-		'use-notifications': Options.USE_NOTIFICATIONS,
-		'use-unrecognized-song-notifications': Options.USE_UNRECOGNIZED_SONG_NOTIFICATIONS,
-		'scrobble-podcasts': Options.SCROBBLE_PODCASTS,
-	};
-	const CONNECTORS_OPTIONS_UI_MAP = {
-		Tidal: {
-			'tdl-short-track-names': 'useShortTrackNames'
-		},
-		YouTube: {
-			'yt-music-only': 'scrobbleMusicOnly',
-			'yt-entertainment-only': 'scrobbleEntertainmentOnly',
+	class OptionsPresenter {
+		constructor(view) {
+			this.view = view;
+
+			this.setPrivacyPolicyUrl();
+			this.setLatestReleaseUrl();
+			this.updateSections();
+
+			this.initOptions();
+			this.initConnectors();
 		}
-	};
 
-	async function initialize() {
-		await initializeOptions();
-		await initializeConnectorsOptions();
-	}
+		/** Public methods. */
 
-	async function initializeOptions() {
-		for (const optionId in OPTIONS_UI_MAP) {
-			const option = OPTIONS_UI_MAP[optionId];
-			const optionCheckBox = document.getElementById(optionId);
+		onConnectorCheckBoxClick(index, isChecked) {
+			const connector = sortedConnectors[index];
+			Options.setConnectorEnabled(connector, isChecked);
+		}
 
-			optionCheckBox.addEventListener('click', async function() {
-				Options.setOption(option, this.checked);
+		onConnectorOptionCheckBoxClick(connectorLabel, optionId, isChecked) {
+			Options.setConnectorOption(connectorLabel, optionId, isChecked);
+		}
+
+		async onExportButtonClick() {
+			const data = await localCache.get();
+			this.view.exportLocalCache(data, exportFileName);
+		}
+
+		async onImportButtonClick() {
+			this.view.importLocalCache();
+		}
+
+		onLocalCacheImported(data) {
+			return localCache.set(data);
+		}
+
+		onOptionCheckBoxClick(optionId, isChecked) {
+			Options.setOption(optionId, isChecked);
+		}
+
+		onOptionsContainerClick(e) {
+			if (e.altKey) {
+				this.view.showHiddenOptions();
+			}
+		}
+
+		onScroblePercentChanged(percent) {
+			Options.setOption(Options.SCROBBLE_PERCENT, percent);
+		}
+
+		onToggleCheckBoxClick(isEnabled) {
+			Options.setAllConnectorsEnabled(isEnabled);
+			this.view.toggleAllConnectors(isEnabled);
+		}
+
+		/** Private methods. */
+
+		async initOptions() {
+			const percent = await Options.getOption(Options.SCROBBLE_PERCENT);
+			this.view.setScrobblePercent(percent);
+
+			const optionIds = [
+				Options.DISABLE_GA,
+				Options.FORCE_RECOGNIZE,
+				Options.USE_NOTIFICATIONS,
+				Options.SCROBBLE_PODCASTS,
+				Options.USE_UNRECOGNIZED_SONG_NOTIFICATIONS,
+			];
+
+			const connectorOptionsIds = {
+				Tidal: ['useShortTrackNames'],
+				YouTube: ['scrobbleMusicOnly', 'scrobbleEntertainmentOnly'],
+			};
+
+			for (const optionId of optionIds) {
+				const isChecked = await Options.getOption(optionId);
+				this.view.addOptionCheckBox(optionId, isChecked);
+			}
+
+			for (const connector in connectorOptionsIds) {
+				for (const optionId of connectorOptionsIds[connector]) {
+					const isChecked =	await Options.getConnectorOption(connector, optionId);
+					this.view.addConnectorOptionCheckBox(connector, optionId, isChecked);
+				}
+			}
+		}
+
+		async initConnectors() {
+			const connectorsCount = sortedConnectors.length;
+			const disabledConnectors = await Options.getOption(Options.DISABLED_CONNECTORS);
+			const toggleCheckboxState = Object.keys(disabledConnectors).length !== connectorsCount;
+
+			sortedConnectors.forEach(({ label, id }, index) => {
+				const isEnabled = !(id in disabledConnectors);
+
+				this.view.addConnector(label, index, isEnabled);
 			});
 
-			const optionValue = await Options.getOption(option);
-			optionCheckBox.checked = optionValue;
+			this.view.setToggleCheckBox(toggleCheckboxState);
 		}
 
-		const scrobblePercentElem = document.getElementById(scrobblePercentId);
-		for (const val of percentValues) {
-			const percentOption = document.createElement('option');
-			percentOption.textContent = `${val}%`;
+		async setPrivacyPolicyUrl() {
+			const privacyPolicyFile = await getPrivacyPolicyFilename();
+			const privacyPolicyUrl = `${rawSrcUrl}/${privacyPolicyFile}`;
 
-			scrobblePercentElem.append(percentOption);
+			this.view.setPrivacyPolicyUrl(privacyPolicyUrl);
 		}
-		scrobblePercentElem.selectedIndex = percentValues.indexOf(
-			await Options.getOption(Options.SCROBBLE_PERCENT)
-		);
-		scrobblePercentElem.addEventListener('change', function() {
-			const percent = percentValues[this.selectedIndex];
-			Options.setOption(Options.SCROBBLE_PERCENT, percent);
-		});
 
-		const optionsContainer = document.getElementById(optionsContainerId);
-		optionsContainer.addEventListener('click', (event) => {
-			if (event.altKey) {
-				showHiddenOptions();
-			}
-		});
-	}
+		setLatestReleaseUrl() {
+			const extVersion = browser.runtime.getManifest().version;
+			const releaseNotesUrl = `${releasesUrl}/v${extVersion}`;
 
-	async function initializeConnectorsOptions() {
-		for (const connector in CONNECTORS_OPTIONS_UI_MAP) {
-			for (const optionId in CONNECTORS_OPTIONS_UI_MAP[connector]) {
-				const option = CONNECTORS_OPTIONS_UI_MAP[connector][optionId];
-				const optionCheckBox = document.getElementById(optionId);
+			this.view.setLatestReleaseUrl(releaseNotesUrl);
+		}
 
-				optionCheckBox.addEventListener('click', async function() {
-					Options.setConnectorOption(connector, option, this.checked);
-				});
+		updateSections() {
+			const map = {
+				'#accounts': this.view.expandAccountsSection,
+				'#options': this.view.expandOptionsSection,
+			};
 
-				const optionValue =
-					await Options.getConnectorOption(connector, option);
-				optionCheckBox.checked = optionValue;
+			const func = map[location.hash];
+			if (func) {
+				func.bind(this.view)();
 			}
 		}
 	}
 
-	function showHiddenOptions() {
-		document.getElementById(hiddenOptionsId).hidden = false;
-	}
-
-	return { initialize };
+	return OptionsPresenter;
 });
