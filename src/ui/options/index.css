@@ -26,7 +26,11 @@
 	font-weight: bold;
 }
 
-.conn-config:hover {
+.connector-config i,
+.connector-config input {
+	margin-right: 0.25rem;
+}
+.connector-config a:hover {
 	text-decoration: none;
 }
 
@@ -60,8 +64,4 @@
 
 .close-btn {
 	float: none;
-}
-
-.hidden-options {
-	display: none;
 }
