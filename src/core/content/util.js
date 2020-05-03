@@ -406,6 +406,23 @@ const Util = {
 	},
 
 	/**
+	* Check if an element matching a given selector is visible.
+	*
+	* @param  {String|Array} selectors Single selector or array of selectors
+	* @return {Boolean} Check result
+	*/
+	/* istanbul ignore next */
+	isElementVisible(selectors) {
+		const element = this.queryElement(selectors);
+		if (!element) {
+			return false;
+		}
+
+		// jQuery's :visible / :hidden pseudoselectors
+		return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+	},
+
+	/**
 	 * Return an array of elements matching by a given selectors. The `selectors`
 	 * argument can be either a string, or an array of strings. If an array of
 	 * strings is passed, the function will return an array of elements queried

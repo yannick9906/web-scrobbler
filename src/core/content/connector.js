@@ -332,25 +332,11 @@ function BaseConnector() {
 	 */
 	this.isPlaying = () => {
 		if (this.playButtonSelector) {
-			const playButton = Util.queryElement(this.playButtonSelector);
-			if (playButton) {
-				return getComputedStyle(playButton)['display'] === 'none';
-				// return playButton.style.display === 'none';
-				// return playButton.offsetWidth === 0 && playButton.offsetHeight === 0;
-			}
-
-			return true;
+			return !Util.isElementVisible(this.playButtonSelector);
 		}
 
 		if (this.pauseButtonSelector) {
-			const pauseButton = Util.queryElement(this.pauseButtonSelector);
-			if (pauseButton) {
-				return getComputedStyle(pauseButton)['display'] !== 'none';
-				// return pauseButton.style.display !== 'none';
-				// return pauseButton.offsetWidth !== 0 && pauseButton.offsetHeight !== 0;
-			}
-
-			return false;
+			return Util.isElementVisible(this.pauseButtonSelector);
 		}
 
 		/*
