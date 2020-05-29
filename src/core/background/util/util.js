@@ -127,8 +127,16 @@ define(() => {
 		});
 	}
 
+	function getReadableStorageUsage(bytesInUse, bytesTotal) {
+		const kibiBytesInUse = Math.ceil(bytesInUse / 1024);
+		const kibiBytesTotal = Math.ceil(bytesTotal / 1024);
+
+		return `${kibiBytesInUse} / ${kibiBytesTotal} KiB`;
+	}
+
 	return {
 		debugLog,
+		getReadableStorageUsage,
 		getSecondsToScrobble,
 		hideObjectValue,
 		hideStringInText,

@@ -131,14 +131,35 @@ define((require) => {
 	}
 
 	/**
+	 * Get the current amount of data stored in the local storage.
+	 */
+	function getLocalStorageUsage() {
+		return browser.storage.local.getBytesInUse(null);
+	}
+
+	/**
+	 * Get maximum amount in bytes of data can be stored in the local storage.
+	 */
+	function getLocalStorageSize() {
+		return browser.storage.local.QUOTA_BYTES;
+	}
+
+	/**
 	 * Object that helps to get wrapped storage.
 	 */
 	return {
-		getStorage, getScrobblerStorage,
+		getStorage,
+		getSyncStorage,
+		getLocalStorage,
+		getScrobblerStorage,
+		getLocalStorageSize,
+		getLocalStorageUsage,
 
-		getLocalStorage, getSyncStorage,
-
-		CONNECTORS_OPTIONS, CUSTOM_PATTERNS,
-		NOTIFICATIONS, LOCAL_CACHE, OPTIONS, CORE
+		CONNECTORS_OPTIONS,
+		CUSTOM_PATTERNS,
+		NOTIFICATIONS,
+		LOCAL_CACHE,
+		OPTIONS,
+		CORE,
 	};
 });

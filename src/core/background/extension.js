@@ -34,6 +34,7 @@ define((require) => {
 	const ScrobbleService = require('object/scrobble-service');
 
 	const { openTab } = require('util/util-browser');
+	const { getReadableStorageUsage } = require('util/util');
 
 	const {
 		ControllerReset, SongNowPlaying, SongScrobbled, SongUnrecognized
@@ -70,6 +71,11 @@ define((require) => {
 		 */
 		async start() {
 			await this.updateVersionInStorage();
+
+			const bytesInUse = await BrowserStorage.getLocalStorageUsage();
+			const bytesTotal = BrowserStorage.getLocalStorageSize();
+
+			console.log(getReadableStorageUsage(bytesInUse, bytesTotal));
 
 			if (!await this.bindScrobblers()) {
 				console.warn('No scrobblers are bound');
@@ -295,7 +301,6 @@ define((require) => {
 				}
 
 				case SongUnrecognized: {
-					console.log(2222);
 					const song = ctrl.getCurrentSong();
 					Notifications.showSongNotRecognized(song, () => {
 						openTab(ctrl.tabId);
