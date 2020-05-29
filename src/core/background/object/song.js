@@ -8,9 +8,8 @@ define(() => {
 		/**
 		 * @constructor
 		 * @param {Object} parsedData Current state received from connector
-		 * @param {Object} connector Connector match object
 		 */
-		constructor(parsedData, connector) {
+		constructor(parsedData) {
 			/**
 			 * Safe copy of initial parsed data.
 			 * Must not be modified.
@@ -33,8 +32,6 @@ define(() => {
 			 * Optional data. Can be modified.
 			 */
 			this.metadata = { /* Filled in `initMetadata` method */ };
-
-			this.connectorLabel = connector.label;
 
 			this.initSongData();
 		}
@@ -211,7 +208,7 @@ define(() => {
 		 */
 		getCloneableData() {
 			const fieldsToCopy = [
-				'parsed', 'processed', 'metadata', 'flags', 'connectorLabel'
+				'parsed', 'processed', 'metadata', 'flags',
 			];
 			const clonedSong = {};
 
@@ -314,8 +311,6 @@ define(() => {
 				 * @type {Number}
 				 */
 				startTimestamp: Math.floor(Date.now() / 1000),
-
-				label: this.connectorLabel,
 			};
 		}
 

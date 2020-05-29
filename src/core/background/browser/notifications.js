@@ -124,14 +124,14 @@ define((require) => {
 	/**
 	 * Show 'Now playing' notification.
 	 * @param  {Object} song Copy of song instance
+	 * @param  {String} contextMessage Custom context message
 	 * @param  {Function} [onClick] Function that will be called on notification click
 	 */
-	async function showNowPlaying(song, onClick) {
+	async function showNowPlaying(song, contextMessage, onClick) {
 		if (!await isAllowed()) {
 			return;
 		}
 
-		const connectorLabel = song.metadata.label;
 		const iconUrl = song.getTrackArt() || defaultTrackArtUrl;
 		// @ifdef CHROME
 		let message = song.getArtist();
@@ -139,7 +139,7 @@ define((require) => {
 		// @endif
 		/* @ifdef FIREFOX
 		let message = `${song.getTrack()}\n${song.getArtist()}`;
-		let title = `Web Scrobbler \u2022 ${connectorLabel}`;
+		let title = `Web Scrobbler \u2022 ${contextMessage}`;
 		/* @endif */
 
 		const albumName = song.getAlbum();
@@ -158,7 +158,7 @@ define((require) => {
 
 			// @ifdef CHROME
 			silent: true,
-			contextMessage: connectorLabel
+			contextMessage,
 			// @endif
 		};
 

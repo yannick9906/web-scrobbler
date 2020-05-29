@@ -81,7 +81,6 @@ class InfoPopup {
 		this.view.setTrackArt(trackArtUrl);
 		this.view.setUserLovedIcon(userloved);
 		this.view.setUserPlayCount(userPlayCount);
-		this.view.setConnectorLabel(this.song.connectorLabel);
 	}
 
 	updateControls() {
@@ -139,6 +138,10 @@ class InfoPopup {
 		if (this.view.isDebugInfoVisible()) {
 			this.updateDebugInfo();
 		}
+	}
+
+	setConnectorLabel(label) {
+		this.view.setConnectorLabel(label);
 	}
 
 	/** Control listeners */
