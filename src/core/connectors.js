@@ -1497,6 +1497,13 @@ const connectors = [{
 	],
 	js: 'connectors/napster.js',
 	id: 'napster',
+}, {
+	label: 'Tomorrowland OneWorldRadio',
+	matches: [
+		'*://https://oneworldradio.tomorrowland.com/*',
+	],
+	js: 'connectors/oneworldradio.tomorrowland.js',
+	id: 'oneworldradiotomorrowland',
 }];
 
 define(() => connectors);
